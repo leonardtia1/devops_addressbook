@@ -1,57 +1,50 @@
 pipeline{
     tools{
-        jdk 'myjava'
-        maven 'mymaven'
+        maven 'my_maven'
+        jdk 'my_java'
     }
-    
-    agent none
+    agent {label 'aws_centos_node'}
     stages{
-            stage('Compile'){
-                agent any
-                steps{
-                    sh 'mvn compile'
+        stage('Compile'){
+            steps{
+                sh 'mvn compile'
+            }
+        }
+        stage('Code_Review'){
+            steps{
+                sh 'mvn pmd:pmd'
+            }
+            post{
+                always{
+                    pmd pattern: 'target/pmd.xml'
                 }
             }
-            stage('CodeReview'){
-                agent any
-                steps{
-                    sh 'mvn pmd:pmd'
-                }
-                post{
-                    always{
-                        pmd pattern: 'target/pmd.xml'
-                    }
+        }
+        stage('Unit_Test'){
+            steps{
+                sh 'mvn test'
+            }
+            post{
+                always{
+                    junit 'target/surefire-reports/*.xml'
+
                 }
             }
-            stage('UnitTest'){
-                agent {label 'slave_win'}
-                steps{
-                    git 'https://github.com/devops-trainer/DevOpsClassCodes.git'
-                    bat 'mvn test'
-                }
-                post{
-                    always{
-                        junit 'target/surefire-reports/*.xml'
-                    }
-                }
-                
+        }
+        stage('Metric_Check'){
+            steps{
+                sh 'mvn cobertura:cobertura -Dcobertura.report.format=xml'
             }
-            stage('MetricCheck'){
-                agent any
-                steps{
-                    sh 'mvn cobertura:cobertura -Dcobertura.report.format=xml'
-                }
-                post{
-                    always{
-                        cobertura coberturaReportFile: 'target/site/cobertura/coverage.xml'
-                    }
+            post{
+                always{
+                    cobertura coberturaReportFile: 'target/site/cobertura/coverage.xml'
                 }
             }
-            stage('Package'){
-                agent any
-                steps{
-                    sh 'mvn package'
-                }
+        }
+        stage('Package'){
+            steps{ 
+                sh 'mvn package'
             }
+        }  
     }
 }
